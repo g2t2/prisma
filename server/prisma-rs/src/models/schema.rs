@@ -1,10 +1,6 @@
 use std::sync::{Arc, Weak};
 
-use crate::{
-    error::Error,
-    models::{ModelRef, ModelTemplate},
-    PrismaResult,
-};
+use crate::{error::Error, models::prelude::*, PrismaResult};
 
 use once_cell::unsync::OnceCell;
 
@@ -26,6 +22,7 @@ pub struct Schema {
     pub relations: Vec<Relation>,
     pub enums: Vec<PrismaEnum>,
     pub version: Option<String>,
+    pub project: ProjectWeakRef,
 }
 
 #[derive(Debug, Deserialize)]
@@ -52,10 +49,11 @@ pub struct PrismaEnum {
     values: Vec<String>,
 }
 
-impl Into<SchemaRef> for SchemaTemplate {
-    fn into(self) -> SchemaRef {
+impl SchemaTemplate {
+    pub fn build(self, project: ProjectWeakRef) -> SchemaRef {
         let schema = Arc::new(Schema {
             models: OnceCell::new(),
+            project: project,
             relations: self.relations,
             enums: self.enums,
             version: self.version,
@@ -85,6 +83,18 @@ impl Schema {
 
     pub fn is_legacy(&self) -> bool {
         self.version.is_none()
+    }
+
+    pub fn with_project<F, T>(&self, f: F) -> T
+    where
+        F: FnOnce(Arc<Project>) -> T,
+    {
+        match self.project.upgrade(){
+            Some(model) => f(model),
+            None => panic!(
+                "Project does not exist anymore. Parent project is deleted without deleting the child schema."
+            )
+        }
     }
 }
 

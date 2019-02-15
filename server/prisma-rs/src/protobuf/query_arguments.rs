@@ -6,7 +6,57 @@ use sql::{
     prelude::*,
 };
 
-use crate::protobuf::prelude::*;
+use crate::{models::prelude::*, protobuf::prelude::*};
+
+impl Into<Order> for SortOrder {
+    fn into(self) -> Order {
+        match self {
+            SortOrder::Asc => Order::Ascending,
+            SortOrder::Desc => Order::Descending,
+        }
+    }
+}
+
+impl QueryArguments {
+    fn cursor_condition(&self, model: &Model) -> ConditionTree {
+        match (
+            self.before.as_ref(),
+            self.after.as_ref(),
+            self.order_by.as_ref(),
+        ) {
+            (None, None, _) => ConditionTree::NoCondition,
+            (before, after, order_by) => {
+                let field = match order_by {
+                    Some(order) => model
+                        .fields()
+                        .find_from_scalar(&order.scalar_field)
+                        .unwrap(),
+                    None => model.fields().id(),
+                };
+
+                let value = before
+                    .or_else(|| after)
+                    .and_then(|id| id.id_value)
+                    .unwrap();
+
+                let sort_order: Order = order_by
+                    .map(|order| order.sort_order().into())
+                    .unwrap_or(Order::Ascending);
+
+                let select_query = select_from(&model.table())
+                    .column(field.model_column())
+                    .column(value)
+                    .columns(
+                    &vec![
+                    field.model_column(),
+
+                    ]
+                    sort_order,
+                );
+            }
+        }
+    }
+}
 
 impl Into<ConditionTree> for ScalarFilter {
     fn into(self) -> ConditionTree {
@@ -146,6 +196,15 @@ impl Into<ConditionTree> for Filter {
     }
 }
 
+impl ToDatabaseValue for IdValue {
+    fn to_database_value(self) -> DatabaseValue {
+        match self.id_value.unwrap() {
+            graphql_id::IdValue::String(s) => s.to_database_value(),
+            graphql_id::IdValue::Int(i) => i.to_database_value(),
+        }
+    }
+}
+
 impl ToDatabaseValue for PrismaValue {
     fn to_database_value(self) -> DatabaseValue {
         match self {
@@ -159,10 +218,7 @@ impl ToDatabaseValue for PrismaValue {
             PrismaValue::Relation(i) => i.to_database_value(),
             PrismaValue::Null(_) => DatabaseValue::Null,
             PrismaValue::Uuid(u) => u.to_database_value(),
-            PrismaValue::GraphqlId(id) => match id.id_value.unwrap() {
-                graphql_id::IdValue::String(s) => s.to_database_value(),
-                graphql_id::IdValue::Int(i) => i.to_database_value(),
-            },
+            PrismaValue::GraphqlId(id) => id.id_value.to_database_value(),
         }
     }
 }

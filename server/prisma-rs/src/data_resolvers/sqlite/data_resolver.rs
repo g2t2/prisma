@@ -19,11 +19,10 @@ impl DataResolver for Sqlite {
             .map(|f| f.db_name().to_string())
             .collect();
 
-        let table_location = Self::table_location(database_name, query.model.db_name());
         let conditions = query.conditions;
 
         self.with_connection(database_name, |conn| {
-            let query_sql = dbg!(select_from(&table_location)
+            let query_sql = dbg!(select_from(&query.model.table())
                 .columns(&field_names)
                 .so_that(conditions)
                 .compile()

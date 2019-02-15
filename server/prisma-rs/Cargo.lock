@@ -900,7 +900,7 @@ dependencies = [
 [[package]]
 name = "sql"
 version = "0.4.3"
-source = "git+https://github.com/prisma/sql.git#9c0f16364b840a334380fd510a9065d854ce3232"
+source = "git+https://github.com/prisma/sql.git#d1bfeaf64cde04a40e2835436efbb14409fcddda"
 
 [[package]]
 name = "stable_deref_trait"

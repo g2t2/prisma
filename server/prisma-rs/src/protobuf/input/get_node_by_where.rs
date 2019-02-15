@@ -14,8 +14,8 @@ impl IntoSelectQuery for GetNodeByWhereInput {
         let project_template: ProjectTemplate =
             serde_json::from_reader(self.project_json.as_slice())?;
 
-        let project: Project = project_template.into();
-        let model = project.schema.find_model(&self.model_name)?;
+        let project: ProjectRef = project_template.into();
+        let model = project.schema().find_model(&self.model_name)?;
 
         let fields = self
             .selected_fields
@@ -37,6 +37,7 @@ impl IntoSelectQuery for GetNodeByWhereInput {
             model: model,
             selected_fields: fields,
             conditions: ConditionTree::single(field.equals(value)),
+            cursor: None,
             order_by: None, // TODO
             skip: None,
             after: None,
